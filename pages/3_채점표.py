@@ -74,7 +74,6 @@ base_pred = np.full_like(y_test, fill_value=most_frequent_class)
 
 # 5. 혼동행렬 및 성능 지표 계산 함수
 def compute_confusion_matrix_and_metrics(y_true, y_pred):
-    # TP: 실제 1, 예측 1 / FP: 실제 0, 예측 1 / FN: 실제 1, 예측 0 / TN: 실제 0, 예측 0
     tp = int(np.sum((y_true == 1) & (y_pred == 1)))
     fp = int(np.sum((y_true == 0) & (y_pred == 1)))
     fn = int(np.sum((y_true == 1) & (y_pred == 0)))
@@ -198,21 +197,16 @@ else:
     current_pred = dt_pred
     current_metrics = dt_metrics
 
-# 테스트 데이터에 예측값 결합
 eval_df = test_df.copy()
 eval_df["pred"] = current_pred
 eval_df["id_idx"] = eval_df.index
 
-# 1) 놓친 환자 (FN): 실제 1인데 예측 0
 fn_df = eval_df[(eval_df["stroke"] == 1) & (eval_df["pred"] == 0)].copy()
-# 2) 헛짚은 사람 (FP): 실제 0인데 예측 1
 fp_df = eval_df[(eval_df["stroke"] == 0) & (eval_df["pred"] == 1)].copy()
 
-# 나이 내림차순 정렬
 fn_df = fn_df.sort_values(by="age", ascending=False)
 fp_df = fp_df.sort_values(by="age", ascending=False)
 
-# 표시할 열 정리를 위한 한글화
 display_cols = ["id_idx", "age", "avg_glucose_level", "hypertension", "heart_disease"]
 col_rename = {
     "id_idx": "번호",
@@ -237,4 +231,15 @@ with col_list1:
         st.info("놓친 환자가 없습니다.")
 
 with col_list2:
-    st.
+    st.markdown(f"#### ⚠️ 헛짚은 사람 (뇌졸중이 아니나 뇌졸중으로 예측) [전체: {len(fp_df)}명]")
+    if len(fp_df) > 0:
+        show_fp_df = fp_df[display_cols].rename(columns=col_rename)
+        if len(fp_df) > 20:
+            st.caption("※ 나이가 많은 순으로 상위 20명만 표시합니다.")
+            st.dataframe(show_fp_df.head(20), use_container_width=True)
+        else:
+            st.dataframe(show_fp_df, use_container_width=True)
+    else:
+        st.info("헛짚은 사람이 없습니다.")
+
+st.info(f"💡 위 두 목록의 인원수(놓친 환자: {len(fn_df)}명, 헛짚은 사람: {len(fp_df)}명)는 상단 혼동행렬 표의 **FN({current_metrics['FN']}명)**, **FP({current_metrics['FP']}명)** 칸의 사람 수와 정확히 일치합니다.")
